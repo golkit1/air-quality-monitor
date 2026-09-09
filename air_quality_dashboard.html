@@ -579,10 +579,15 @@ const commonOpts = {
     x: { ticks: { color: '#6e737c', maxTicksLimit: 8, font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#2c313a' } },
     y: { ticks: { color: '#6e737c', font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#2c313a' } }
   },
-  plugins: { legend: { labels: {
-    color: '#a3a8b0', font: { family: 'Inter', size: 12 },
-    filter: (item) => !item.text.startsWith('סף') && !item.text.startsWith('חמור')
-  } } }
+  plugins: {
+    legend: { labels: {
+      color: '#a3a8b0', font: { family: 'Inter', size: 12 },
+      filter: (item) => !item.text.startsWith('סף') && !item.text.startsWith('חמור')
+    } },
+    tooltip: {
+      filter: (item) => !item.dataset.label.startsWith('סף') && !item.dataset.label.startsWith('חמור')
+    }
+  }
 };
 
 let pmChartMini, pmChart, envChart, gasChart;
