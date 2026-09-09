@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניטור אוויר - עבודות בנייה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-deep: #171a1f;
+    --bg-panel: #21252c;
+    --bg-panel-2: #272c34;
+    --text-hi: #eeece5;
+    --text-mid: #a3a8b0;
+    --text-dim: #6e737c;
+    --accent-dust: #c17a3e;
+    --accent-clean: #4c9aa0;
+    --accent-alert: #c14e3e;
+    --border: #33383f;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg-deep);
+    color: var(--text-hi);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ---------- Sidebar ---------- */
+  nav.sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    padding: 22px 16px;
+    display: flex;
+    flex-direction: column;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; padding: 0 6px; }
+  .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-dust); }
+  .brand-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; }
+  .brand-sub { font-size: 11px; color: var(--text-dim); }
+  .nav-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: var(--text-dim); text-transform: uppercase; margin: 6px 6px 8px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px; cursor: pointer;
+    font-size: 14px; color: var(--text-mid); margin-bottom: 2px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-item:hover { background: var(--bg-panel-2); color: var(--text-hi); }
+  .nav-item.active { background: var(--bg-panel-2); color: var(--text-hi); }
+  .nav-item .icon { font-family: 'IBM Plex Mono', monospace; font-size: 12px; width: 16px; text-align: center; }
+  .nav-item .badge {
+    margin-right: auto; background: var(--accent-alert); color: #fff;
+    font-size: 10px; padding: 1px 6px; border-radius: 999px; font-family: 'IBM Plex Mono', monospace;
+  }
+  .sidebar-footer {
+    margin-top: auto; padding: 12px; border-radius: 10px; background: var(--bg-panel-2);
+    font-size: 12px; color: var(--text-mid);
+  }
+  .sidebar-footer .status-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#5fbf7a; margin-left:6px; }
+  .sidebar-footer .device-name { font-weight: 600; color: var(--text-hi); margin: 4px 0 2px; }
+  .sidebar-footer .device-meta { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--text-dim); line-height: 1.6; }
+
+  /* ---------- Main area ---------- */
+  main.content { flex: 1; overflow-y: auto; }
+  .page { display: none; padding: 28px 32px 60px; max-width: 1080px; }
+  .page.active { display: block; }
+
+  header.page-header { margin-bottom: 24px; }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.14em;
+    color: var(--accent-dust); text-transform: uppercase; margin-bottom: 6px;
+  }
+  h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: clamp(24px, 4vw, 34px); margin: 0 0 6px 0; }
+  .subtitle { color: var(--text-mid); font-size: 13.5px; }
+
+  /* dashboard hero */
+  .hero-wrap { position: relative; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); margin-bottom: 22px; }
+  #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.5; }
+  .hero-content { position: relative; z-index: 1; padding: 26px; }
+  .hero-stat { display: flex; align-items: baseline; gap: 10px; }
+  .hero-stat .num { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 52px; line-height: 1; }
+  .hero-stat .unit { color: var(--text-mid); font-size: 14px; }
+  .hero-stat .tag {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 4px 10px;
+    border-radius: 999px; border: 1px solid var(--border); margin-right: 8px;
+  }
+
+  .status-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-dim); }
+
+  .config-note {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 22px; font-size: 13px; color: var(--text-mid); line-height: 1.6;
+  }
+  .config-note code { font-family: 'IBM Plex Mono', monospace; background: var(--bg-panel-2); padding: 1px 6px; border-radius: 4px; color: var(--accent-dust); }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+  .card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .card .label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+  .card .value { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 28px; }
+  .card .value .unit { font-size: 12px; color: var(--text-mid); font-weight: 400; margin-right: 4px; }
+  .card .value.ok { color: var(--accent-clean); }
+  .card .value.warn { color: var(--accent-dust); }
+  .card .value.danger { color: var(--accent-alert); }
+
+  section.chart-section { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 20px; }
+  section.chart-section h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; margin: 0 0 4px 0; }
+  section.chart-section .desc { font-size: 12.5px; color: var(--text-dim); margin-bottom: 14px; }
+  .chart-wrap { position: relative; height: 260px; }
+
+  .range-buttons { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .range-btn {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 6px 12px;
+    border-radius: 999px; border: 1px solid var(--border); background: var(--bg-panel-2);
+    color: var(--text-mid); cursor: pointer;
+  }
+  .range-btn.active { background: var(--accent-dust); color: #1c1f26; border-color: var(--accent-dust); font-weight: 600; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; }
+  table.data-table th { text-align: right; padding: 8px 10px; color: var(--text-dim); font-weight: 500; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  table.data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text-hi); }
+  table.data-table tr:hover td { background: var(--bg-panel-2); }
+  .table-wrap { max-height: 460px; overflow-y: auto; border-radius: 8px; }
+
+  /* alerts page */
+  .alerts-summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 22px; }
+  .alert-item {
+    display: flex; align-items: center; gap: 12px; background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
+  }
+  .alert-item .sev { font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 3px 9px; border-radius: 999px; font-weight: 600; }
+  .alert-item .sev.warning { background: rgba(193,122,62,0.18); color: var(--accent-dust); }
+  .alert-item .sev.danger { background: rgba(193,78,62,0.18); color: var(--accent-alert); }
+  .alert-item .sev.ok { background: rgba(76,154,160,0.18); color: var(--accent-clean); }
+  .alert-item .txt { font-size: 13.5px; }
+  .alert-item .txt .t1 { font-weight: 600; margin-bottom: 2px; }
+  .alert-item .txt .t2 { color: var(--text-mid); font-size: 12.5px; }
+
+  .threshold-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .threshold-field { background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .threshold-field label { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .threshold-field input {
+    width: 100%; background: var(--bg-deep); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text-hi); font-family: 'IBM Plex Mono', monospace; font-size: 15px; padding: 6px 8px;
+  }
+  .save-btn {
+    margin-top: 16px; background: var(--accent-dust); color: #1c1f26; border: none; border-radius: 8px;
+    padding: 10px 20px; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13.5px; cursor: pointer;
+  }
+  .save-note { font-size: 12px; color: var(--text-dim); margin-right: 10px; }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text-mid); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="brand">
+    <span class="dot"></span>
+    <div>
+      <div class="brand-name">AQ-Monitor</div>
+      <div class="brand-sub">ניטור אבק ופיח</div>
+    </div>
+  </div>
+
+  <div class="nav-eyebrow">עמודים</div>
+  <div class="nav-item active" data-page="dashboard"><span class="icon">◆</span> דשבורד</div>
+  <div class="nav-item" data-page="pm"><span class="icon">▤</span> קריאות PM</div>
+  <div class="nav-item" data-page="env"><span class="icon">◐</span> סביבה</div>
+  <div class="nav-item" data-page="history"><span class="icon">▦</span> היסטוריה</div>
+  <div class="nav-item" data-page="alerts"><span class="icon">▲</span> אזעקות <span class="badge" id="alertBadge" style="display:none">0</span></div>
+
+  <div class="sidebar-footer">
+    <span class="status-dot"></span><span class="device-name">AQ-MONITOR-01</span>
+    <div class="device-meta">XIAO ESP32S3<br>PMS7003 · BME680</div>
+  </div>
+</nav>
+
+<main class="content">
+
+  <!-- ===================== עמוד: דשבורד ===================== -->
+  <div class="page active" id="page-dashboard">
+    <div class="hero-wrap">
+      <canvas id="particleCanvas"></canvas>
+      <div class="hero-content">
+        <div class="eyebrow">AQ-MONITOR · תיעוד עבודות בנייה</div>
+        <h1>ניטור אבק ופיח בבית</h1>
+        <div class="subtitle">נתונים חיים מ-PMS7003 ו-BME680, נאספים אוטומטית ל-Google Sheets</div>
+        <div class="hero-stat" style="margin-top:18px;">
+          <span class="num" id="heroPM">--</span>
+          <span class="unit">µg/m³ · PM2.5 אחרון</span>
+          <span class="tag" id="heroTag">ממתין לנתונים</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-note">
+      לפני שימוש: פתח את הקובץ בעורך קוד, מצא את המשתנה <code>SHEETS_URL</code> בתחילת ה-JavaScript,
+      והדבק שם את כתובת ה-Web App מ-Google Apps Script.
+    </div>
+
+    <div class="status-row"><span id="statusText">טוען נתונים...</span></div>
+
+    <div class="grid" id="statCards">
+      <div class="card"><div class="label">PM1.0</div><div class="value"><span id="statPM1">--</span><span class="unit">µg/m³</span></div></div>
+      <div class="card"><div class="label">PM2.5</div><div class="value"><span id="statPM25">--</span><span class="unit">µg/m³</span></div></div>
+      <div class="card"><div class="label">PM10</div><div class="value"><span id="statPM10">--</span><span class="unit">µg/m³</span></div></div>
+      <div class="card"><div class="label">טמפרטורה</div><div class="value"><span id="statTemp">--</span><span class="unit">°C</span></div></div>
+      <div class="card"><div class="label">לחות</div><div class="value"><span id="statHum">--</span><span class="unit">%</span></div></div>
+      <div class="card"><div class="label">התנגדות גז (VOC)</div><div class="value"><span id="statGas">--</span><span class="unit">kΩ</span></div></div>
+    </div>
+
+    <section class="chart-section">
+      <h2>חלקיקים לאורך זמן</h2>
+      <div class="desc">PM1.0 / PM2.5 / PM10 - שיאים בגרף מצביעים על שעות פעילות בנייה</div>
+      <div class="chart-wrap"><canvas id="pmChartMini"></canvas></div>
+    </section>
+  </div>
+
+  <!-- ===================== עמוד: קריאות PM ===================== -->
+  <div class="page" id="page-pm">
+    <header class="page-header">
+      <div class="eyebrow">חלקיקים</div>
+      <h1>קריאות PM</h1>
+      <div class="subtitle">מגמת PM1.0 / PM2.5 / PM10 לאורך טווחי זמן שונים</div>
+    </header>
+
+    <div class="range-buttons" id="rangeButtons">
+      <button class="range-btn" data-mins="15">15 דק'</button>
+      <button class="range-btn" data-mins="60">שעה</button>
+      <button class="range-btn" data-mins="180">3 שעות</button>
+      <button class="range-btn" data-mins="360">6 שעות</button>
+      <button class="range-btn" data-mins="720">12 שעות</button>
+      <button class="range-btn active" data-mins="1440">24 שעות</button>
+      <button class="range-btn" data-mins="0">הכל</button>
+    </div>
+
+    <section class="chart-section">
+      <div class="chart-wrap" style="height:360px"><canvas id="pmChart"></canvas></div>
+    </section>
+  </div>
+
+  <!-- ===================== עמוד: סביבה ===================== -->
+  <div class="page" id="page-env">
+    <header class="page-header">
+      <div class="eyebrow">BME680</div>
+      <h1>סביבה</h1>
+      <div class="subtitle">טמפרטורה, לחות, והתנגדות גז (מדד יחסי ל-VOC)</div>
+    </header>
+
+    <div class="grid" style="grid-template-columns: repeat(3,1fr);">
+      <div class="card"><div class="label">טמפרטורה</div><div class="value"><span id="envTemp">--</span><span class="unit">°C</span></div></div>
+      <div class="card"><div class="label">לחות</div><div class="value"><span id="envHum">--</span><span class="unit">%</span></div></div>
+      <div class="card"><div class="label">התנגדות גז</div><div class="value"><span id="envGas">--</span><span class="unit">kΩ</span></div></div>
+    </div>
+
+    <section class="chart-section">
+      <h2>טמפרטורה ולחות</h2>
+      <div class="chart-wrap"><canvas id="envChart"></canvas></div>
+    </section>
+
+    <section class="chart-section">
+      <h2>התנגדות גז (VOC)</h2>
+      <div class="desc">ערך גבוה יותר = פחות תרכובות אורגניות נדיפות באוויר. ירידה חדה יכולה להצביע על צבעים, ממיסים או פליטות בעירה</div>
+      <div class="chart-wrap"><canvas id="gasChart"></canvas></div>
+    </section>
+  </div>
+
+  <!-- ===================== עמוד: היסטוריה ===================== -->
+  <div class="page" id="page-history">
+    <header class="page-header">
+      <div class="eyebrow">לוג מלא</div>
+      <h1>היסטוריה</h1>
+      <div class="subtitle">כל הדגימות שנשלחו מה-ESP32 ל-Google Sheets (עד 500 השורות האחרונות)</div>
+    </header>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>זמן</th><th>PM1.0</th><th>PM2.5</th><th>PM10</th><th>טמפ'</th><th>לחות</th><th>גז (kΩ)</th></tr></thead>
+        <tbody id="historyTableBody"><tr><td colspan="7" class="empty-state">טוען...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===================== עמוד: אזעקות ===================== -->
+  <div class="page" id="page-alerts">
+    <header class="page-header">
+      <div class="eyebrow">ניטור סף</div>
+      <h1>אזעקות</h1>
+      <div class="subtitle">התראות מחושבות מול הקריאה האחרונה, בהתאם לספים שתגדיר למטה</div>
+    </header>
+
+    <div id="alertsList"></div>
+
+    <section class="chart-section" style="margin-top:26px;">
+      <h2>הגדרת ספי אזעקה</h2>
+      <div class="desc">נשמר בדפדפן הזה בלבד (localStorage) - לא נשלח לענן</div>
+      <div class="threshold-form">
+        <div class="threshold-field"><label>PM2.5 - התראה (µg/m³)</label><input type="number" id="th_pm25_warn" value="35"></div>
+        <div class="threshold-field"><label>PM2.5 - חמור (µg/m³)</label><input type="number" id="th_pm25_danger" value="55"></div>
+        <div class="threshold-field"><label>PM10 - התראה (µg/m³)</label><input type="number" id="th_pm10_warn" value="80"></div>
+        <div class="threshold-field"><label>PM10 - חמור (µg/m³)</label><input type="number" id="th_pm10_danger" value="150"></div>
+        <div class="threshold-field"><label>התנגדות גז - התראה מתחת ל- (kΩ)</label><input type="number" id="th_gas_warn" value="50"></div>
+        <div class="threshold-field"><label>לחות - התראה מעל (%)</label><input type="number" id="th_hum_warn" value="70"></div>
+      </div>
+      <button class="save-btn" onclick="saveThresholds()">שמור ספים</button>
+      <span class="save-note" id="saveNote"></span>
+    </section>
+  </div>
+
+</main>
+
+<script>
+// ============ הגדרה: הדבק כאן את כתובת ה-Web App ============
+const SHEETS_URL = "https://script.google.com/macros/s/AKfycbydwvTCP8v9_QtyrWpBYVLMIAlXUIeYu-66Hr1PuAytqP5oD4llY5u4qkPYKsqaMaLbwA/exec";
+// חייב להיות זהה בדיוק ל-SECRET_KEY ב-Apps Script ובקוד הארדואינו
+const SECRET_KEY = "shanti-air-2026";
+// ================================================================
+
+const REFRESH_MS = 60000;
+let allRows = [];
+let latestPM25 = 0;
+let currentRangeMins = 1440;
+
+// ---------- ניווט בין עמודים ----------
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('page-' + item.dataset.page).classList.add('active');
+  });
+});
+
+// ---------- ספי אזעקה (localStorage) ----------
+const DEFAULT_THRESHOLDS = { pm25_warn: 35, pm25_danger: 55, pm10_warn: 80, pm10_danger: 150, gas_warn: 50, hum_warn: 70 };
+function loadThresholds() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('aq_thresholds'));
+    return saved ? { ...DEFAULT_THRESHOLDS, ...saved } : { ...DEFAULT_THRESHOLDS };
+  } catch (e) { return { ...DEFAULT_THRESHOLDS }; }
+}
+function saveThresholds() {
+  const t = {
+    pm25_warn: Number(document.getElementById('th_pm25_warn').value),
+    pm25_danger: Number(document.getElementById('th_pm25_danger').value),
+    pm10_warn: Number(document.getElementById('th_pm10_warn').value),
+    pm10_danger: Number(document.getElementById('th_pm10_danger').value),
+    gas_warn: Number(document.getElementById('th_gas_warn').value),
+    hum_warn: Number(document.getElementById('th_hum_warn').value)
+  };
+  localStorage.setItem('aq_thresholds', JSON.stringify(t));
+  document.getElementById('saveNote').textContent = 'נשמר ✓';
+  setTimeout(() => document.getElementById('saveNote').textContent = '', 2000);
+  if (allRows.length) computeAlerts(allRows[allRows.length - 1]);
+}
+function populateThresholdInputs() {
+  const t = loadThresholds();
+  document.getElementById('th_pm25_warn').value = t.pm25_warn;
+  document.getElementById('th_pm25_danger').value = t.pm25_danger;
+  document.getElementById('th_pm10_warn').value = t.pm10_warn;
+  document.getElementById('th_pm10_danger').value = t.pm10_danger;
+  document.getElementById('th_gas_warn').value = t.gas_warn;
+  document.getElementById('th_hum_warn').value = t.hum_warn;
+}
+
+function computeAlerts(last) {
+  const t = loadThresholds();
+  const alerts = [];
+  const pm25 = Number(last.pm2_5), pm10 = Number(last.pm10), gas = Number(last.gas_resistance), hum = Number(last.humidity);
+
+  if (pm25 >= t.pm25_danger) alerts.push({ sev: 'danger', title: 'PM2.5 גבוה מאוד', desc: `PM2.5 עומד על ${pm25} µg/m³ - מעל סף החמור (${t.pm25_danger})` });
+  else if (pm25 >= t.pm25_warn) alerts.push({ sev: 'warning', title: 'PM2.5 מוגבר', desc: `PM2.5 עומד על ${pm25} µg/m³ - מעל סף ההתראה (${t.pm25_warn})` });
+
+  if (pm10 >= t.pm10_danger) alerts.push({ sev: 'danger', title: 'PM10 גבוה מאוד', desc: `PM10 עומד על ${pm10} µg/m³ - מעל סף החמור (${t.pm10_danger})` });
+  else if (pm10 >= t.pm10_warn) alerts.push({ sev: 'warning', title: 'PM10 מוגבר', desc: `PM10 עומד על ${pm10} µg/m³ - מעל סף ההתראה (${t.pm10_warn})` });
+
+  if (!isNaN(gas) && gas > 0 && gas < t.gas_warn) alerts.push({ sev: 'warning', title: 'VOC מוגבר', desc: `התנגדות הגז ירדה ל-${gas} kΩ (מתחת ל-${t.gas_warn}) - ייתכן ריח/ממס/פליטת בעירה` });
+
+  if (!isNaN(hum) && hum > t.hum_warn) alerts.push({ sev: 'warning', title: 'לחות גבוהה', desc: `לחות ${hum}% - מעל ${t.hum_warn}%, עלול להשפיע על דיוק חיישן ה-PM` });
+
+  const listEl = document.getElementById('alertsList');
+  const badge = document.getElementById('alertBadge');
+  if (alerts.length === 0) {
+    listEl.innerHTML = `<div class="alert-item"><span class="sev ok">תקין</span><div class="txt"><div class="t1">אין התראות פעילות</div><div class="t2">כל המדדים בטווח הרגיל</div></div></div>`;
+    badge.style.display = 'none';
+  } else {
+    listEl.innerHTML = alerts.map(a => `<div class="alert-item"><span class="sev ${a.sev}">${a.sev === 'danger' ? 'חמור' : 'התראה'}</span><div class="txt"><div class="t1">${a.title}</div><div class="t2">${a.desc}</div></div></div>`).join('');
+    badge.style.display = 'inline-block';
+    badge.textContent = alerts.length;
+  }
+}
+
+// ---------- טעינת נתונים ----------
+async function loadData() {
+  const statusEl = document.getElementById('statusText');
+  if (SHEETS_URL.includes("PASTE_YOUR")) {
+    statusEl.textContent = "⚠ טרם הוגדרה כתובת ה-Sheets - ערוך את SHEETS_URL בקוד";
+    document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="7" class="empty-state">יש להגדיר SHEETS_URL תחילה</td></tr>';
+    return;
+  }
+  try {
+    statusEl.textContent = "מרענן נתונים...";
+    const res = await fetch(SHEETS_URL + "?limit=1500&key=" + encodeURIComponent(SECRET_KEY));
+    const json = await res.json();
+    if (json.status !== "success") throw new Error(json.message || "שגיאה לא ידועה");
+
+    allRows = json.data.filter(r => r.pm2_5 !== "" && r.pm2_5 !== undefined);
+    if (allRows.length === 0) { statusEl.textContent = "אין עדיין נתונים בגיליון"; return; }
+
+    const last = allRows[allRows.length - 1];
+    renderStats(last);
+    renderMiniChart(allRows);
+    renderRangeChart();
+    renderEnvCharts(allRows);
+    renderHistoryTable(allRows);
+    computeAlerts(last);
+    statusEl.textContent = `${allRows.length} דגימות · עודכן ${new Date().toLocaleTimeString('he-IL')}`;
+  } catch (err) {
+    statusEl.textContent = "שגיאת טעינה: " + err.message;
+  }
+}
+
+function renderStats(last) {
+  document.getElementById('statPM1').textContent = last.pm1_0;
+  document.getElementById('statPM25').textContent = last.pm2_5;
+  document.getElementById('statPM10').textContent = last.pm10;
+  document.getElementById('statTemp').textContent = last.temperature;
+  document.getElementById('statHum').textContent = last.humidity;
+  document.getElementById('statGas').textContent = last.gas_resistance;
+  document.getElementById('envTemp').textContent = last.temperature;
+  document.getElementById('envHum').textContent = last.humidity;
+  document.getElementById('envGas').textContent = last.gas_resistance;
+
+  document.getElementById('heroPM').textContent = last.pm2_5;
+  latestPM25 = Number(last.pm2_5) || 0;
+
+  const tag = document.getElementById('heroTag');
+  let level, color;
+  if (latestPM25 <= 12) { level = "אוויר נקי"; color = "var(--accent-clean)"; }
+  else if (latestPM25 <= 35) { level = "בינוני"; color = "var(--accent-dust)"; }
+  else { level = "מזוהם"; color = "var(--accent-alert)"; }
+  tag.textContent = level; tag.style.color = color; tag.style.borderColor = color;
+}
+
+function fmtLabel(ts) {
+  return new Date(ts).toLocaleString('he-IL', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+}
+const commonOpts = {
+  responsive: true, maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  scales: {
+    x: { ticks: { color: '#6e737c', maxTicksLimit: 8, font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#2c313a' } },
+    y: { ticks: { color: '#6e737c', font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#2c313a' } }
+  },
+  plugins: { legend: { labels: { color: '#a3a8b0', font: { family: 'Inter', size: 12 } } } }
+};
+
+let pmChartMini, pmChart, envChart, gasChart;
+function renderMiniChart(rows) {
+  const recent = rows.slice(-120);
+  if (pmChartMini) pmChartMini.destroy();
+  pmChartMini = new Chart(document.getElementById('pmChartMini'), {
+    type: 'line',
+    data: { labels: recent.map(r => fmtLabel(r.timestamp)), datasets: [
+      { label: 'PM1.0', data: recent.map(r => r.pm1_0), borderColor: '#4c9aa0', backgroundColor: 'transparent', tension: 0.25, pointRadius: 0, borderWidth: 1.5 },
+      { label: 'PM2.5', data: recent.map(r => r.pm2_5), borderColor: '#c17a3e', backgroundColor: 'transparent', tension: 0.25, pointRadius: 0, borderWidth: 2 },
+      { label: 'PM10', data: recent.map(r => r.pm10), borderColor: '#c14e3e', backgroundColor: 'transparent', tension: 0.25, pointRadius: 0, borderWidth: 1.5 }
+    ]},
+    options: commonOpts
+  });
+}
+
+document.getElementById('rangeButtons').addEventListener('click', (e) => {
+  if (!e.target.classList.contains('range-btn')) return;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  currentRangeMins = Number(e.target.dataset.mins);
+  renderRangeChart();
+});
+
+function renderRangeChart() {
+  let rows = allRows;
+  if (currentRangeMins > 0) {
+    const cutoff = Date.now() - currentRangeMins * 60000;
+    rows = allRows.filter(r => new Date(r.timestamp).getTime() >= cutoff);
+    if (rows.length === 0) rows = allRows.slice(-50); // גיבוי אם אין דגימות בטווח
+  }
+  if (pmChart) pmChart.destroy();
+  pmChart = new Chart(document.getElementById('pmChart'), {
+    type: 'line',
+    data: { labels: rows.map(r => fmtLabel(r.timestamp)), datasets: [
+      { label: 'PM1.0', data: rows.map(r => r.pm1_0), borderColor: '#4c9aa0', backgroundColor: 'transparent', tension: 0.2, pointRadius: 0, borderWidth: 1.5 },
+      { label: 'PM2.5', data: rows.map(r => r.pm2_5), borderColor: '#c17a3e', backgroundColor: 'transparent', tension: 0.2, pointRadius: 0, borderWidth: 2 },
+      { label: 'PM10', data: rows.map(r => r.pm10), borderColor: '#c14e3e', backgroundColor: 'transparent', tension: 0.2, pointRadius: 0, borderWidth: 1.5 }
+    ]},
+    options: commonOpts
+  });
+}
+
+function renderEnvCharts(rows) {
+  const recent = rows.slice(-200);
+  if (envChart) envChart.destroy();
+  envChart = new Chart(document.getElementById('envChart'), {
+    type: 'line',
+    data: { labels: recent.map(r => fmtLabel(r.timestamp)), datasets: [
+      { label: 'טמפרטורה (°C)', data: recent.map(r => r.temperature), borderColor: '#c17a3e', backgroundColor: 'transparent', tension: 0.25, pointRadius: 0, borderWidth: 1.5 },
+      { label: 'לחות (%)', data: recent.map(r => r.humidity), borderColor: '#4c9aa0', backgroundColor: 'transparent', tension: 0.25, pointRadius: 0, borderWidth: 1.5 }
+    ]},
+    options: commonOpts
+  });
+
+  if (gasChart) gasChart.destroy();
+  gasChart = new Chart(document.getElementById('gasChart'), {
+    type: 'line',
+    data: { labels: recent.map(r => fmtLabel(r.timestamp)), datasets: [
+      { label: 'התנגדות גז (kΩ)', data: recent.map(r => r.gas_resistance), borderColor: '#9a7fc1', backgroundColor: 'rgba(154,127,193,0.08)', fill: true, tension: 0.25, pointRadius: 0, borderWidth: 1.5 }
+    ]},
+    options: commonOpts
+  });
+}
+
+function renderHistoryTable(rows) {
+  const tbody = document.getElementById('historyTableBody');
+  const recent = rows.slice(-500).reverse();
+  tbody.innerHTML = recent.map(r => `<tr>
+    <td>${fmtLabel(r.timestamp)}</td><td>${r.pm1_0}</td><td>${r.pm2_5}</td><td>${r.pm10}</td>
+    <td>${r.temperature}</td><td>${r.humidity}</td><td>${r.gas_resistance}</td>
+  </tr>`).join('');
+}
+
+// ============ ויזואליזציית חלקיקים חיה ============
+const canvas = document.getElementById('particleCanvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+function resizeCanvas() { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; }
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+function targetParticleCount() { return Math.min(220, 20 + latestPM25 * 1.4); }
+function spawnParticle() {
+  return { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 0.6+Math.random()*1.8,
+    vx:(Math.random()-0.5)*0.15, vy:(Math.random()-0.5)*0.15, a: 0.15+Math.random()*0.35 };
+}
+function animate() {
+  const target = targetParticleCount();
+  while (particles.length < target) particles.push(spawnParticle());
+  while (particles.length > target) particles.pop();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const color = latestPM25 > 35 ? '193,78,62' : (latestPM25 > 12 ? '193,122,62' : '76,154,160');
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x<0) p.x=canvas.width; if (p.x>canvas.width) p.x=0;
+    if (p.y<0) p.y=canvas.height; if (p.y>canvas.height) p.y=0;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle=`rgba(${color},${p.a})`; ctx.fill();
+  });
+  requestAnimationFrame(animate);
+}
+animate();
+
+populateThresholdInputs();
+loadData();
+setInterval(loadData, REFRESH_MS);
+</script>
+
+</body>
+</html>
