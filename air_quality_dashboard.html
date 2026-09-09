@@ -159,6 +159,19 @@
 
   .empty-state { text-align: center; padding: 40px 20px; color: var(--text-mid); font-size: 13px; }
 
+  .info-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; margin-bottom: 16px; }
+  .info-card h3 { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; margin: 0 0 8px 0; }
+  .info-card .unit-note { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); margin-right: 8px; }
+  .info-card p { font-size: 13.5px; color: var(--text-mid); line-height: 1.7; margin: 0 0 14px 0; }
+  .range-list { display: flex; flex-direction: column; gap: 6px; }
+  .range-item { display: flex; align-items: center; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; padding: 6px 10px; border-radius: 8px; background: var(--bg-panel-2); }
+  .range-item .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .range-item .dot.good { background: var(--accent-clean); }
+  .range-item .dot.mid { background: var(--accent-dust); }
+  .range-item .dot.bad { background: var(--accent-alert); }
+  .range-item .rlabel { color: var(--text-hi); min-width: 70px; }
+  .range-item .rval { color: var(--text-mid); }
+
   .table-wrap { overflow-x: auto; }
 
   /* ---------- מובייל ---------- */
@@ -206,6 +219,7 @@
   <div class="nav-item" data-page="env"><span class="icon">◐</span> סביבה</div>
   <div class="nav-item" data-page="history"><span class="icon">▦</span> היסטוריה</div>
   <div class="nav-item" data-page="alerts"><span class="icon">▲</span> אזעקות <span class="badge" id="alertBadge" style="display:none">0</span></div>
+  <div class="nav-item" data-page="info"><span class="icon">ℹ</span> מידע</div>
 
   <div class="sidebar-footer">
     <span class="status-dot"></span><span class="device-name">AQ-MONITOR-01</span>
@@ -342,6 +356,72 @@
       <button class="save-btn" onclick="saveThresholds()">שמור ספים</button>
       <span class="save-note" id="saveNote"></span>
     </section>
+  </div>
+
+  <!-- ===================== עמוד: מידע ===================== -->
+  <div class="page" id="page-info">
+    <header class="page-header">
+      <div class="eyebrow">הסברים</div>
+      <h1>מידע על המדדים</h1>
+      <div class="subtitle">מה כל ערך אומר, ובאילו טווחים הוא נחשב תקין, בינוני, או בעייתי</div>
+    </header>
+
+    <div class="info-card">
+      <h3>PM1.0 <span class="unit-note">µg/m³</span></h3>
+      <p>חלקיקים עדינים ביותר (עד 1 מיקרון). נשארים הכי הרבה זמן מרחפים באוויר וחודרים הכי עמוק לריאות ואף לזרם הדם. אצלנו - האינדיקציה הכי טובה לפיח, עשן, או פליטות בעירה (למשל ציוד דיזל בעבודות בנייה), פחות לאבק מינרלי גס.</p>
+      <div class="range-list">
+        <div class="range-item"><span class="dot good"></span><span class="rlabel">תקין</span><span class="rval">0–12</span></div>
+        <div class="range-item"><span class="dot mid"></span><span class="rlabel">בינוני</span><span class="rval">13–35</span></div>
+        <div class="range-item"><span class="dot bad"></span><span class="rlabel">גבוה</span><span class="rval">35+</span></div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3>PM2.5 <span class="unit-note">µg/m³</span></h3>
+      <p>חלקיקים עד 2.5 מיקרון - המדד הבינלאומי המרכזי לזיהום אוויר (זה שה-WHO ורוב מדינות העולם משתמשים בו). כולל גם אבק עדין וגם פיח. הספים למטה תואמים בערך לתקן ה-EPA האמריקאי, ומופעלים בפועל במערכת ההתראות שלנו.</p>
+      <div class="range-list">
+        <div class="range-item"><span class="dot good"></span><span class="rlabel">תקין</span><span class="rval">0–34</span></div>
+        <div class="range-item"><span class="dot mid"></span><span class="rlabel">התראה</span><span class="rval">35–54</span></div>
+        <div class="range-item"><span class="dot bad"></span><span class="rlabel">חמור</span><span class="rval">55+</span></div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3>PM10 <span class="unit-note">µg/m³</span></h3>
+      <p>חלקיקים עד 10 מיקרון - כולל את כל מה שב-PM2.5 ובנוסף חלקיקים גדולים יותר, בעיקר אבק בנייה, מלט, גבס וטיח. זה המדד הכי רלוונטי לזיהוי ישיר של אבק בנייה גס.</p>
+      <div class="range-list">
+        <div class="range-item"><span class="dot good"></span><span class="rlabel">תקין</span><span class="rval">0–79</span></div>
+        <div class="range-item"><span class="dot mid"></span><span class="rlabel">התראה</span><span class="rval">80–149</span></div>
+        <div class="range-item"><span class="dot bad"></span><span class="rlabel">חמור</span><span class="rval">150+</span></div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3>טמפרטורה <span class="unit-note">°C</span></h3>
+      <p>מדידה סביבתית רגילה מה-BME680. אין לה סף "בעייתי" מבחינת זיהום אוויר - היא נמדדת בעיקר בשביל ההקשר (למשל להבין אם שינוי ב-PM קשור למזג אוויר), ולא בשביל אזעקה בפני עצמה.</p>
+    </div>
+
+    <div class="info-card">
+      <h3>לחות <span class="unit-note">%</span></h3>
+      <p>חשוב במיוחד כי לחות גבוהה עלולה "לבלבל" את חיישן ה-PM האופטי - טיפות מים זעירות באוויר לפעמים מזוהות בטעות כחלקיקי אבק, מה שיכול לנפח מלאכותית את קריאות ה-PM בימים לחים או מעוננים. לכן יש התראה נפרדת על לחות גבוהה, כדי שתדע לפרש קריאת PM גבוהה בזהירות באותם מצבים.</p>
+      <div class="range-list">
+        <div class="range-item"><span class="dot good"></span><span class="rlabel">רגיל</span><span class="rval">עד 70%</span></div>
+        <div class="range-item"><span class="dot mid"></span><span class="rlabel">גבוה</span><span class="rval">70%+ (קריאות PM פחות אמינות)</span></div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3>התנגדות גז / VOC <span class="unit-note">kΩ</span></h3>
+      <p>לא מדד ישיר לחומר ספציפי - ה-BME680 מחמם רכיב פנימי ומודד כמה קשה לזרם חשמלי לעבור דרך האוויר סביבו. ככל שיש יותר תרכובות אורגניות נדיפות (VOC - מדבקים, צבעים, ממיסים, פליטות בעירה), ההתנגדות <b>יורדת</b>. כלומר: מספר נמוך = יותר VOC באוויר, מספר גבוה = אוויר נקי יחסית מבחינת גזים. זהו מדד יחסי למגמות ("משהו השתנה"), לא כימות מדויק של חומר מסוים.</p>
+      <div class="range-list">
+        <div class="range-item"><span class="dot good"></span><span class="rlabel">תקין</span><span class="rval">50+</span></div>
+        <div class="range-item"><span class="dot bad"></span><span class="rlabel">VOC מוגבר</span><span class="rval">מתחת ל-50</span></div>
+      </div>
+    </div>
+
+    <div class="config-note">
+      הטווחים למעלה הם קירוב מעשי המבוסס על תקנים כלליים (כמו EPA), לא ייעוץ רפואי. אם אתה חושש מחשיפה ממושכת לאבק בנייה, כדאי להתייעץ עם גורם מקצועי.
+    </div>
   </div>
 
 </main>
