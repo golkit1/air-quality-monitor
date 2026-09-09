@@ -537,10 +537,20 @@ async function loadData() {
   }
 }
 
+function levelColor(value, warn, danger) {
+  if (value >= danger) return 'var(--accent-alert)';
+  if (value >= warn) return 'var(--accent-dust)';
+  return 'var(--accent-clean)';
+}
+
 function renderStats(last) {
   document.getElementById('statPM1').textContent = last.pm1_0;
-  document.getElementById('statPM25').textContent = last.pm2_5;
-  document.getElementById('statPM10').textContent = last.pm10;
+  const pm25El = document.getElementById('statPM25');
+  pm25El.textContent = last.pm2_5;
+  pm25El.style.color = levelColor(Number(last.pm2_5), 35, 55);
+  const pm10El = document.getElementById('statPM10');
+  pm10El.textContent = last.pm10;
+  pm10El.style.color = levelColor(Number(last.pm10), 80, 150);
   document.getElementById('statTemp').textContent = last.temperature;
   document.getElementById('statHum').textContent = last.humidity;
   document.getElementById('statGas').textContent = last.gas_resistance;
@@ -569,7 +579,10 @@ const commonOpts = {
     x: { ticks: { color: '#6e737c', maxTicksLimit: 8, font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#2c313a' } },
     y: { ticks: { color: '#6e737c', font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#2c313a' } }
   },
-  plugins: { legend: { labels: { color: '#a3a8b0', font: { family: 'Inter', size: 12 } } } }
+  plugins: { legend: { labels: {
+    color: '#a3a8b0', font: { family: 'Inter', size: 12 },
+    filter: (item) => !item.text.startsWith('סף') && !item.text.startsWith('חמור')
+  } } }
 };
 
 let pmChartMini, pmChart, envChart, gasChart;
@@ -602,13 +615,19 @@ function renderRangeChart() {
     rows = allRows.filter(r => new Date(r.timestamp).getTime() >= cutoff);
     if (rows.length === 0) rows = allRows.slice(-50); // גיבוי אם אין דגימות בטווח
   }
+  const labels = rows.map(r => fmtLabel(r.timestamp));
+  const flat = (v) => labels.map(() => v);
   if (pmChart) pmChart.destroy();
   pmChart = new Chart(document.getElementById('pmChart'), {
     type: 'line',
-    data: { labels: rows.map(r => fmtLabel(r.timestamp)), datasets: [
-      { label: 'PM1.0', data: rows.map(r => r.pm1_0), borderColor: '#4c9aa0', backgroundColor: 'transparent', tension: 0.2, pointRadius: 0, borderWidth: 1.5 },
-      { label: 'PM2.5', data: rows.map(r => r.pm2_5), borderColor: '#c17a3e', backgroundColor: 'transparent', tension: 0.2, pointRadius: 0, borderWidth: 2 },
-      { label: 'PM10', data: rows.map(r => r.pm10), borderColor: '#c14e3e', backgroundColor: 'transparent', tension: 0.2, pointRadius: 0, borderWidth: 1.5 }
+    data: { labels, datasets: [
+      { label: 'PM1.0', data: rows.map(r => r.pm1_0), borderColor: '#4c9aa0', backgroundColor: 'transparent', tension: 0.2, pointRadius: 0, borderWidth: 1.5, order: 5 },
+      { label: 'PM2.5', data: rows.map(r => r.pm2_5), borderColor: '#c17a3e', backgroundColor: 'transparent', tension: 0.2, pointRadius: 0, borderWidth: 2, order: 5 },
+      { label: 'PM10', data: rows.map(r => r.pm10), borderColor: '#c14e3e', backgroundColor: 'transparent', tension: 0.2, pointRadius: 0, borderWidth: 1.5, order: 5 },
+      { label: 'סף PM2.5', data: flat(35), borderColor: 'rgba(193,122,62,0.55)', backgroundColor: 'transparent', borderDash: [5, 4], pointRadius: 0, borderWidth: 1, order: 1 },
+      { label: 'חמור PM2.5', data: flat(55), borderColor: 'rgba(193,78,62,0.55)', backgroundColor: 'transparent', borderDash: [5, 4], pointRadius: 0, borderWidth: 1, order: 1 },
+      { label: 'סף PM10', data: flat(80), borderColor: 'rgba(193,122,62,0.3)', backgroundColor: 'transparent', borderDash: [2, 4], pointRadius: 0, borderWidth: 1, order: 1 },
+      { label: 'חמור PM10', data: flat(150), borderColor: 'rgba(193,78,62,0.3)', backgroundColor: 'transparent', borderDash: [2, 4], pointRadius: 0, borderWidth: 1, order: 1 }
     ]},
     options: commonOpts
   });
